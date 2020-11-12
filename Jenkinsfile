@@ -1,71 +1,25 @@
-currentBuild.displayName = currentBuild.projectName +"-${para}#" +currentBuild.number
 pipeline{
     agent any
-    parameters {
-  choice choices: ['dev', 'uat', 'prod'], description: 'choose deployment environment', name: 'para'
-}
-
     tools {
-  maven 'mavan'
+  maven 'maven3'
 }
 
     stages{
-        stage('paramstage'){
+        stage('Git checkout'){
             steps{
-                echo "this is from ${params.para} environment"
+               git credentialsId: 'git', url: 'https://github.com/Eluri1423/springmvc'
             }
         }
-        stage('parallel'){
-            parallel{
-                stage('one'){
-                    steps{
-                 echo  "1"
-                sleep   2
-                echo   "2"
-                sleep   2
-                echo    "3"
-                sleep   2
-                echo   "4"
-                    }
-                }
-            
-        stage('two'){
+        stage('Maven Build'){
             steps{
-                 echo "a"
-                sleep  2
-                echo  "b"
-                sleep  2
-                echo "c"
-                sleep 2
-                echo "d"
-                }
-              }
+            sh 'mvn clean package'
             }
-        }
-        stage('displayname'){
+        }   
+        stage('Tomcat Deploy'){
             steps{
-            echo currentBuild.displayName
-           
-}
-}
-  
-        stage('git checkout'){
-            steps{
-                git credentialsId: 'github', url: 'https://github.com/chnaveen112/springmvc'
+                sshPublisher(publishers: [sshPublisherDesc(configName: 'tomcat9', transfers: [sshTransfer(cleanRemote: false, excludes: '', execCommand: '''/opt/tomcat9/bin/shutdown.sh
+/opt/tomcat9/bin/startup.sh''', execTimeout: 120000, flatten: false, makeEmptyDirs: false, noDefaultExcludes: false, patternSeparator: '[, ]+', remoteDirectory: '', remoteDirectorySDF: false, removePrefix: 'target/', sourceFiles: 'target/springmvc.war')], usePromotionTimestamp: false, useWorkspaceInPromotion: false, verbose: false)])
             }
-        }
-        stage('mvn build'){
-            steps{
-                sh 'mvn clean package'
-            }
-        }
-        stage('tomcat deploy'){
-            steps{
-                sshagent(['tomcat']) {
-    // some block
-    sh "scp target/springmvc.war ec2-user@172.31.9.71:/opt/tomcat8/webapps/"
-          }        
         }
     }
-  }
 }
